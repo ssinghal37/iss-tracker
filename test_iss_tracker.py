@@ -29,9 +29,36 @@ def test_get_epoch(client):
         assert ep_response.status_code == 200
         assert ep_response.json["EPOCH"] == ep
 
+def test_get_epoch_speed(client):
+    '''Testing /epoch/<epoch>/speed'''
+    response = client.get("/epochs")
+    if response.json:
+        ep = response.json[0]["EPOCH"] # epoch we test
+        sp = client.get(f'/epochs/{ep}/speed')
+        assert sp.status_code == 200
+        assert "Instantaneous_Speed" in sp.json
+
+def test_get_epoch_location(client):
+    '''Testing /epoch/<epoch>/location'''
+    response = client.get("/epochs")
+    if response.json:
+        ep = response.json[0]["EPOCH"] # epoch we test
+        loc = client.get(f'/epochs/{ep}/location')
+        assert loc.status_code == 200
+        assert "Latitude" in loc.json
+        assert "Longitude" in loc.json
+        assert "Altitude" in loc.json
+        assert "Geoposition" in loc.json
+
 def test_now(client):
     '''Testing /now'''
     response = client.get("/now")
     assert response.status_code == 200
     assert "EPOCH" in response.json
     assert "Instantaneous_Speed" in response.json
+    assert "Altitude" in response.json
+    assert "Latitude" in response.json
+    assert "Longitude" in response.json
+    assert "Geoposition" in response.json
+
+
