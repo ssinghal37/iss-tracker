@@ -7,6 +7,7 @@ import xmltodict
 from datetime import datetime
 import math
 import redis
+from geopy.geocoders import Nominatim
 
 app = Flask(__name__)
 
@@ -70,6 +71,26 @@ def speed(a: float, b: float, c: float) -> float:
     return math.sqrt(a**2 + b**2 + c**2)
 
 
+def xyz_to_lat_lon(x: float, y: float, z: float) -> tuple:
+    '''
+    Converts given XYZ coordinates to latitude and longitude
+
+    Args:
+        x, y, z (float): coordinate in km
+    
+    Returns:
+        tuple: (latitude, longitude)
+    '''
+    lon = math.atan2(y, x)
+    lat = math.atan2(z, math.sqrt(x**2+y**2))
+
+    # default is radians, so convert to degrees
+    lon = math.degrees(lon)
+    lat = math.degrees(lat)
+    return lat, lon
+
+
+# Force store data into redis upon launch
 if not rd.exists("iss_data"):
     store_iss_data()
 
@@ -111,6 +132,26 @@ def get_speed(epoch):
 def get_loc(epoch):
     '''Returns the lat, lon, altitude, and geoposition for a specified epoch'''
     data = get_data()
+    ep = next((i for i in data if i['EPOCH']==epoch), None)
+    if ep:
+        lat, lon = xyz_to_lat_lon(ep['X'], ep['Y'], ep['Z'])
+        vect = math.sqrt(ep['X']**2 + ep['Y']**2 + ep['Z']**2)
+        altitude = vect - 6371 # radius of Earth in km
+
+        # geopy
+        geolocator = Nominatim(user_agent="iss_tracker")
+        location = geolocator.reverse((lat, lon), exactly_one=True, language="en")
+        geo_pos = location.address if location else "Unknown"
+
+        return jsonify({
+            "EPOCH": epoch,
+            "Latitude": lat,
+            "Longitude": lon,
+            "Altitude": altitude,
+            "Geoposition": geo_pos
+        })
+
+    else: return jsonify({"Error": "Epoch Not Found"}), 404
 
 
 @app.route('/now', methods=['GET'])
@@ -120,17 +161,31 @@ def get_now():
     closest = min(data, key=lambda epo: abs (
         now - datetime.strptime(epo["EPOCH"], "%Y-%jT%H:%M:%S.%fZ")
         ))
+    X = closest['X']
+    Y = closest['Y']
+    Z = closest['Z']
     
-    # need to make new dict to add instantaneous speed
+    # location calculations since separate function wasn't created for altitude/geopos
+    lat, lon = xyz_to_lat_lon(X, Y, Z)
+    altitude = math.sqrt(X**2 + Y**2 + Z**2) - 6371 # radius of Earth in km
+    geolocator = Nominatim(user_agent="iss_tracker")
+    location = geolocator.reverse((lat, lon), exactly_one = True, language = "en")
+    geo_pos = location.address if location else 'Unknown'
+    
+    # need to make new dict for additional info
     return jsonify({
         "EPOCH": closest['EPOCH'],
-        "X": closest['X'],
-        'Y': closest['Y'],
-        "Z": closest["Z"],
+        "X": X,
+        'Y': Y,
+        "Z": Z,
         "X_DOT": closest["X_DOT"],
         "Y_DOT": closest["Y_DOT"],
         'Z_DOT': closest['Z_DOT'],
-        "Instantaenous_Speed": speed(closest['X_DOT'], closest['Y_DOT'], closest['Z_DOT'])
+        "Instantaneous_Speed": speed(closest['X_DOT'], closest['Y_DOT'], closest['Z_DOT']),
+        "Altitude": altitude,
+        "Latitude": lat,
+        "Longitude": lon,
+        "Geoposition": geo_pos
     })
 
 
