@@ -55,6 +55,7 @@ def test_now(client):
     response = client.get("/now")
     assert response.status_code == 200
     assert "EPOCH" in response.json
+    # AI caught spelling mistake in iss_tracker.py in regards to instantaneous speed
     assert "Instantaneous_Speed" in response.json
     assert "Altitude" in response.json
     assert "Latitude" in response.json

@@ -181,6 +181,7 @@ def get_now():
         "X_DOT": closest["X_DOT"],
         "Y_DOT": closest["Y_DOT"],
         'Z_DOT': closest['Z_DOT'],
+        # Misspelled instantaneous here, which ChatGPT caught given my get_now() function and my test_now()
         "Instantaneous_Speed": speed(closest['X_DOT'], closest['Y_DOT'], closest['Z_DOT']),
         "Altitude": altitude,
         "Latitude": lat,
