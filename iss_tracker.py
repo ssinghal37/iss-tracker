@@ -53,7 +53,7 @@ def epochs():
     '''Returns the entire dataset, also factoring in if a limit and offset are given'''
     data = url_to_xml_to_listdict(iss_url)
     limit = request.args.get('limit', type = int)
-    offset = request.args.get('offset', type = int, default = 0)
+    offset = request.args.get('offset', type = int, default = 0) #if a limit is given but no offset, assume still starting at 0
     
     if limit:
         return jsonify(data[offset:offset+limit]) # returns a subset of the dataset
@@ -78,6 +78,10 @@ def get_speed(epoch):
         return jsonify({"EPOCH": epoch, "Instantaneous_Speed": ep_speed})
     else: return jsonify({"Error": "Epoch Not Found"}), 404
 
+@app.route('/epochs/<epoch>/location', methods=['GET'])
+def get_loc(epoch):
+    '''Returns the lat, lon, altitude, and geoposition for a specified epoch'''
+
 @app.route('/now', methods=['GET'])
 def get_now():
     data = url_to_xml_to_listdict(iss_url)
@@ -98,5 +102,5 @@ def get_now():
         "Instantaenous_Speed": speed(closest['X_DOT'], closest['Y_DOT'], closest['Z_DOT'])
     })
 
-if __name__ == '__main__': # not calling a main method this time
+if __name__ == '__main__': # not calling a main method this time, but running our app
     app.run(host='0.0.0.0', port = 5000, debug = True)
