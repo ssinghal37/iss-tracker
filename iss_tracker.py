@@ -10,7 +10,7 @@ import redis
 
 app = Flask(__name__)
 
-rd = redis.Redis(host='127.0.0.1', port = 6379, decode_responses = True) # decode responses prevents having to do .decode('utf-8')
+rd = redis.Redis(host='redis', port = 6379, db=0, decode_responses = True) # decode responses prevents having to do .decode('utf-8')
 iss_url = 'https://nasa-public-data.s3.amazonaws.com/iss-coords/current/ISS_OEM/ISS.OEM_J2K_EPH.xml'
 
 def store_iss_data() -> list[dict[str, float]]:
@@ -27,7 +27,7 @@ def store_iss_data() -> list[dict[str, float]]:
     response.raise_for_status() # causes an HTTP Error if a bad response is received
     data = response.text
     data = xmltodict.parse(data) # data is now a Python dictionary format of the XML file
-
+    print("%%%%%%%%%Storing Data in Redis")
     # analyzing the downloaded XML file, we can see the "path" to the state vectors, e.g. our relevant data
     # we'll extract this with the following line
     relevant_data = data['ndm']['oem']['body']['segment']['data']['stateVector']
@@ -35,7 +35,7 @@ def store_iss_data() -> list[dict[str, float]]:
     # let's make a list with each entry being a dictionary of the values of each state vector
     issData = []
     for vec in relevant_data:
-        listDict.append(
+        issData.append(
                 { # AI Used to Debug "#text" is added because xmltodict automatically creates another dictionary to store the raw string (in HW4)
                     "EPOCH": vec["EPOCH"],
                     "X": float(vec["X"]["#text"]) if isinstance(vec["X"], dict) else float(vec["X"]),
@@ -48,6 +48,7 @@ def store_iss_data() -> list[dict[str, float]]:
         # makes and appends a dictionary for each state vector
 
     rd.set("iss_data", json.dumps(issData)) # stores the data in Redis
+    print("%%%%%%%%%%%Set Data in Redis")
     return issData # to use within this script if needed
 
 
@@ -67,6 +68,10 @@ def get_data() -> list[dict[str, float]]:
 def speed(a: float, b: float, c: float) -> float:
     '''Given three floats for the Cartesian velocity vectors, calculates the resultant magnitude/speed'''
     return math.sqrt(a**2 + b**2 + c**2)
+
+
+if not rd.exists("iss_data"):
+    store_iss_data()
 
 
 @app.route('/epochs', methods=['GET'])
@@ -131,3 +136,4 @@ def get_now():
 
 if __name__ == '__main__': # not calling a main method this time, but running our app
     app.run(host='0.0.0.0', port = 5000, debug = True)
+
