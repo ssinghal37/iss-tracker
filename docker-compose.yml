@@ -10,4 +10,24 @@ services:
     container_name: midterm-iss-app
     ports:
       - "5000:5000"
+    depends_on:
+      - redis
+    networks:
+      - app-network
+
+  redis:
+    image: redis:latest
+    container_name: midterm-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+
+volumes:
+  redis_data:
+
+networks:
+  app-network:
 ...
