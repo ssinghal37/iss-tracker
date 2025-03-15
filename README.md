@@ -1,4 +1,4 @@
-# COE 332 Midterm - ISS Tracking
+# ISS Tracking Flask App
 ## The Sands of Midterm - Overview
 
 This directory/project builds on previous assignments to create a Flask web application that fetches data about the ISS's trajectory from NASA and stores it in a Redis database. The user uses various curl commands with different endpoints (detailed below) to see information. Everything is containerized and runs via Docker
